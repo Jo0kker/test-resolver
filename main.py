@@ -1,11 +1,13 @@
 import pytesseract
-from PIL import ImageGrab, Image
+from PIL import Image, ImageGrab
 import openai
 import tkinter as tk
 from tkinter import messagebox
+from screeninfo import get_monitors
+import mss
 
 # Configuration de Tesseract
-pytesseract.pytesseract.tesseract_cmd = r'xxxx'
+pytesseract.pytesseract.tesseract_cmd = r'C:\Users\r16286\AppData\Local\Programs\Tesseract-OCR\tesseract.exe' # Change path if needed
 
 # Clé API OpenAI
 openai.api_key = 'xxxx'
@@ -17,8 +19,16 @@ selected_area = None
 pre_prompt = "je passe un test technique sur symfony 7, voici une question il faut que tu me donne la réponse sans explication et la plus courte possible, parle moi en francais :\n\n"
 
 def capture_screen_area(x1, y1, x2, y2):
-    # Capture de la zone spécifiée de l'écran
-    screen = ImageGrab.grab(bbox=(x1, y1, x2, y2))
+    # Vérification et ajustement des coordonnées
+    if x1 > x2:
+        x1, x2 = x2, x1
+    if y1 > y2:
+        y1, y2 = y2, y1
+
+    # Capture de la zone spécifiée de l'écran avec Pillow
+    print(f"Capture d'écran: ({x1}, {y1}) - ({x2}, {y2})")  # Debugging line
+    bbox = (x1, y1, x2, y2)
+    screen = ImageGrab.grab(bbox)
     screen.save("screenshot.png")
     return "screenshot.png"
 
@@ -55,8 +65,9 @@ def capture_and_process():
         text = ocr_image(image_path)
         
         if text.strip():  # Vérifie s'il y a du texte capturé
-            response = get_gpt_response(text)
-            messagebox.showinfo("Réponse GPT", response)
+            messagebox.showinfo('debug', 0)
+            # response = get_gpt_response(text)
+            # messagebox.showinfo("Réponse GPT", response)
         else:
             messagebox.showwarning("Attention", "Aucun texte détecté dans la capture d'écran.")
     else:
@@ -64,14 +75,28 @@ def capture_and_process():
 
 class AreaSelector:
     def __init__(self, master, callback):
+        self.master = master
+        self.callback = callback
+
+        # Obtenir les dimensions combinées de tous les moniteurs
+        monitors = get_monitors()
+        self.x1 = min(monitor.x for monitor in monitors)
+        self.y1 = min(monitor.y for monitor in monitors)
+        self.x2 = max(monitor.x + monitor.width for monitor in monitors)
+        self.y2 = max(monitor.y + monitor.height for monitor in monitors)
+
+        print(f"Dimensions des moniteurs: ({self.x1}, {self.y1}) - ({self.x2}, {self.y2})")  # Debugging line
+
+        # Créer une fenêtre couvrant toutes les dimensions des moniteurs
         self.top = tk.Toplevel(master)
-        self.top.attributes("-fullscreen", True)
+        self.top.geometry(f"{self.x2 - self.x1}x{self.y2 - self.y1}+{self.x1}+{self.y1}")
         self.top.attributes("-alpha", 0.3)  # Rendre la fenêtre semi-transparente
+
         self.canvas = tk.Canvas(self.top, cursor="cross")
         self.canvas.pack(fill=tk.BOTH, expand=True)
         self.start_x = self.start_y = self.end_x = self.end_y = 0
         self.rect = None
-        self.callback = callback
+
         self.canvas.bind("<ButtonPress-1>", self.on_button_press)
         self.canvas.bind("<B1-Motion>", self.on_mouse_drag)
         self.canvas.bind("<ButtonRelease-1>", self.on_button_release)
