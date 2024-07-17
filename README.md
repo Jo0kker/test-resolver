@@ -1,6 +1,6 @@
 # Capture and GPT Assistant
 
-This project provides a tool to capture a selected area of the screen, perform OCR (Optical Character Recognition) on the captured image, and then use the OpenAI GPT API to get intelligent responses based on the extracted text. 
+This project provides a tool to capture a selected area of the screen, perform OCR (Optical Character Recognition) on the captured image, and then use the OpenAI GPT API to get intelligent responses based on the extracted text.
 
 ## Prerequisites
 
@@ -75,6 +75,28 @@ This project provides a tool to capture a selected area of the screen, perform O
    - **Select Area:** Click on "Select Area" to define the area of the screen to capture. Click and drag to create a rectangle over the area you want to capture.
    - **Capture and Get Response:** After selecting the area, click on "Capture and Get Response" to capture the selected area, extract text using OCR, and get a response from GPT.
 
+## Customizing the Pre-Prompt
+
+The script includes a pre-prompt to help the GPT model understand the context of the captured text. You can customize this pre-prompt to better suit your needs.
+
+1. **Locate the pre-prompt definition in the script:**
+
+   ```python
+   pre_prompt = "You are a smart assistant. Answer the following questions clearly and concisely:\n\n"
+   ```
+
+2. **Modify the pre-prompt to fit your specific context:**
+
+   For example, if you're asking technical questions, you might change it to:
+
+   ```python
+   pre_prompt = "You are a technical expert. Provide detailed and accurate answers to the following questions:\n\n"
+   ```
+
+3. **Save the script after making your changes.**
+
+By customizing the pre-prompt, you can guide the GPT model to provide more relevant and accurate responses based on the specific context of your captured text.
+
 ## Script Overview
 
 ### Main Functions:
@@ -90,11 +112,6 @@ This project provides a tool to capture a selected area of the screen, perform O
 
 - **AreaSelector:** Handles the selection of the screen area with a transparent overlay.
 
-## Notes
-
-- Make sure Tesseract is correctly installed and the path is set properly in the script.
-- Ensure you have a valid OpenAI API key and have set it in the script.
-
 ## License
 
-This project is licensed under the MIT License.
+This project is licensed under the MIT License. See the LICENSE file for details.
