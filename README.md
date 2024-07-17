@@ -97,6 +97,11 @@ The script includes a pre-prompt to help the GPT model understand the context of
 
 By customizing the pre-prompt, you can guide the GPT model to provide more relevant and accurate responses based on the specific context of your captured text.
 
+## Notes
+
+- Make sure Tesseract is correctly installed and the path is set properly in the script.
+- Ensure you have a valid OpenAI API key and have set it in the script.
+
 ## Script Overview
 
 ### Main Functions:
