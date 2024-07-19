@@ -1,7 +1,7 @@
 import os
 import pytesseract
 from PIL import Image, ImageGrab
-import openai
+from openai import OpenAI
 import tkinter as tk
 from tkinter import messagebox
 from dotenv import load_dotenv
@@ -11,8 +11,8 @@ from datetime import datetime
 load_dotenv()
 
 # Récupérer la clé API et le chemin de Tesseract depuis les variables d'environnement
-openai.api_key = os.getenv('OPENAI_API_KEY')
 tesseract_cmd_path = os.getenv('TESSERACT_CMD_PATH')
+client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
 
 # Configuration de Tesseract
 pytesseract.pytesseract.tesseract_cmd = tesseract_cmd_path
@@ -50,15 +50,13 @@ def ocr_image(image_path):
 def get_gpt_response(question):
     # Inclure le pré-prompt avant la question capturée
     full_prompt = pre_prompt + question
-    response = openai.ChatCompletion.create(
-        model="gpt-3.5-turbo",
-        messages=[
-            {"role": "system", "content": pre_prompt},
-            {"role": "user", "content": question}
-        ],
-        max_tokens=150
-    )
-    return response['choices'][0]['message']['content'].strip()
+    response = client.chat.completions.create(model="gpt-3.5-turbo",
+    messages=[
+        {"role": "system", "content": pre_prompt},
+        {"role": "user", "content": question}
+    ],
+    max_tokens=150)
+    return response.choices[0].message.content.strip()
 
 def select_area():
     # Fonction de sélection de la zone à capturer
@@ -70,7 +68,7 @@ def select_area():
 def on_area_selected(x1, y1, x2, y2):
     global selected_area
     selected_area = (x1, y1, x2, y2)
-    messagebox.showinfo("Zone sélectionnée", f"Zone sélectionnée : ({x1}, {y1}) - ({x2}, {y2})")
+#     messagebox.showinfo("Zone sélectionnée", f"Zone sélectionnée : ({x1}, {y1}) - ({x2}, {y2})")
 
 def capture_and_process():
     if selected_area:
@@ -78,12 +76,15 @@ def capture_and_process():
         text = ocr_image(image_path)
 
         if text.strip():  # Vérifie s'il y a du texte capturé
+#             print(f"Texte capturé: {text}")  # Debugging line
             response = get_gpt_response(text)
-            messagebox.showinfo("Réponse GPT", response)
+            print(f"Réponse GPT: {response}")  # Debugging line
         else:
-            messagebox.showwarning("Attention", "Aucun texte détecté dans la capture d'écran.")
+#             messagebox.showwarning("Attention", "Aucun texte détecté dans la capture d'écran.")
+            print("Aucun texte détecté dans la capture d'écran.")
     else:
-        messagebox.showwarning("Attention", "Aucune zone sélectionnée. Veuillez sélectionner une zone d'abord.")
+        print("Aucune zone sélectionnée. Veuillez sélectionner une zone d'abord.")
+#         messagebox.showwarning("Attention", "Aucune zone sélectionnée. Veuillez sélectionner une zone d'abord.")
 
 class AreaSelector:
     def __init__(self, master, callback):
