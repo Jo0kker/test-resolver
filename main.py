@@ -1,22 +1,27 @@
+import os
 import pytesseract
 from PIL import Image, ImageGrab
 import openai
 import tkinter as tk
 from tkinter import messagebox
-from screeninfo import get_monitors
-import mss
+from dotenv import load_dotenv
+from datetime import datetime
+
+# Charger les variables d'environnement depuis le fichier .env
+load_dotenv()
+
+# Récupérer la clé API et le chemin de Tesseract depuis les variables d'environnement
+openai.api_key = os.getenv('OPENAI_API_KEY')
+tesseract_cmd_path = os.getenv('TESSERACT_CMD_PATH')
 
 # Configuration de Tesseract
-pytesseract.pytesseract.tesseract_cmd = r'C:\Users\r16286\AppData\Local\Programs\Tesseract-OCR\tesseract.exe' # Change path if needed
-
-# Clé API OpenAI
-openai.api_key = 'xxxx'
+pytesseract.pytesseract.tesseract_cmd = tesseract_cmd_path
 
 # Variables globales pour stocker la zone sélectionnée
 selected_area = None
 
 # Pré-prompt pour aider l'IA à comprendre la demande
-pre_prompt = "je passe un test technique sur symfony 7, voici une question il faut que tu me donne la réponse sans explication et la plus courte possible, parle moi en francais :\n\n"
+pre_prompt = "Voici une question type qcm sur symfony 7, il peut y avoir plusieurs réponse possible, donne moi uniquement la ou les bonnes réponses, je ne veux pas d'explication, soit bref:\n\n"
 
 def capture_screen_area(x1, y1, x2, y2):
     # Vérification et ajustement des coordonnées
@@ -29,8 +34,13 @@ def capture_screen_area(x1, y1, x2, y2):
     print(f"Capture d'écran: ({x1}, {y1}) - ({x2}, {y2})")  # Debugging line
     bbox = (x1, y1, x2, y2)
     screen = ImageGrab.grab(bbox)
-    screen.save("screenshot.png")
-    return "screenshot.png"
+
+    # Générer un nom de fichier unique basé sur la date et l'heure
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    filename = f"screenshot_{timestamp}.png"
+
+    screen.save(filename)
+    return filename
 
 def ocr_image(image_path):
     # Extraction du texte de l'image
@@ -40,12 +50,15 @@ def ocr_image(image_path):
 def get_gpt_response(question):
     # Inclure le pré-prompt avant la question capturée
     full_prompt = pre_prompt + question
-    response = openai.Completion.create(
-        engine="gpt-3.5-turbo-instruct",
-        prompt=full_prompt,
+    response = openai.ChatCompletion.create(
+        model="gpt-3.5-turbo",
+        messages=[
+            {"role": "system", "content": pre_prompt},
+            {"role": "user", "content": question}
+        ],
         max_tokens=150
     )
-    return response.choices[0].text.strip()
+    return response['choices'][0]['message']['content'].strip()
 
 def select_area():
     # Fonction de sélection de la zone à capturer
@@ -63,11 +76,10 @@ def capture_and_process():
     if selected_area:
         image_path = capture_screen_area(*selected_area)
         text = ocr_image(image_path)
-        
+
         if text.strip():  # Vérifie s'il y a du texte capturé
-            messagebox.showinfo('debug', 0)
-            # response = get_gpt_response(text)
-            # messagebox.showinfo("Réponse GPT", response)
+            response = get_gpt_response(text)
+            messagebox.showinfo("Réponse GPT", response)
         else:
             messagebox.showwarning("Attention", "Aucun texte détecté dans la capture d'écran.")
     else:
@@ -78,21 +90,20 @@ class AreaSelector:
         self.master = master
         self.callback = callback
 
-        # Obtenir les dimensions combinées de tous les moniteurs
-        monitors = get_monitors()
-        self.x1 = min(monitor.x for monitor in monitors)
-        self.y1 = min(monitor.y for monitor in monitors)
-        self.x2 = max(monitor.x + monitor.width for monitor in monitors)
-        self.y2 = max(monitor.y + monitor.height for monitor in monitors)
+        # Obtenir les dimensions de l'écran
+        screen_width = master.winfo_screenwidth()
+        screen_height = master.winfo_screenheight()
 
-        print(f"Dimensions des moniteurs: ({self.x1}, {self.y1}) - ({self.x2}, {self.y2})")  # Debugging line
+        print(f"Dimensions de l'écran: {screen_width}x{screen_height}")  # Debugging line
 
-        # Créer une fenêtre couvrant toutes les dimensions des moniteurs
+        # Créer une fenêtre sans décoration couvrant l'écran
         self.top = tk.Toplevel(master)
-        self.top.geometry(f"{self.x2 - self.x1}x{self.y2 - self.y1}+{self.x1}+{self.y1}")
+        self.top.overrideredirect(True)  # Supprimer les décorations de la fenêtre
+        self.top.geometry(f"{screen_width}x{screen_height}+0+0")
         self.top.attributes("-alpha", 0.3)  # Rendre la fenêtre semi-transparente
+        self.top.configure(bg='gray')  # Set background to gray
 
-        self.canvas = tk.Canvas(self.top, cursor="cross")
+        self.canvas = tk.Canvas(self.top, cursor="cross", bg='gray', highlightthickness=0)
         self.canvas.pack(fill=tk.BOTH, expand=True)
         self.start_x = self.start_y = self.end_x = self.end_y = 0
         self.rect = None

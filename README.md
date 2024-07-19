@@ -26,10 +26,27 @@ This project provides a tool to capture a selected area of the screen, perform O
 3. **Install the dependencies:**
 
    ```bash
-   pip install pytesseract pillow openai
+   pip install pytesseract pillow openai screeninfo python-dotenv
    ```
 
-4. **Install Tesseract:**
+4. **Install Tkinter:**
+
+   - **Windows:**
+     Tkinter is usually included with Python on Windows. No additional installation should be needed.
+
+   - **macOS:**
+     Tkinter is also included with Python on macOS, but if you encounter issues, you can install it via Homebrew:
+     ```bash
+     brew install python-tk
+     ```
+
+   - **Linux (Debian/Ubuntu):**
+     Install Tkinter using apt-get:
+     ```bash
+     sudo apt-get install python3-tk
+     ```
+
+5. **Install Tesseract:**
 
    - **On Debian/Ubuntu:**
 
@@ -46,7 +63,18 @@ This project provides a tool to capture a selected area of the screen, perform O
    - **On Windows:**
      Download and install Tesseract from [this link](https://github.com/tesseract-ocr/tesseract).
 
-5. **Set up the Tesseract path:**
+6. **Set up the environment variables:**
+
+    Create a `.env` file in the project directory and add the following environment variables:
+    
+    ```plaintext
+    OPENAI_API_KEY=your_openai_api_key
+    TESSERACT_CMD_PATH=/
+    ```
+    
+     Replace `your_openai_api_key` with your actual OpenAI API key.
+
+7. **Set up the Tesseract path:**
 
    Make sure the Tesseract executable is in your system's PATH. If not, update the path in the script:
 
@@ -54,7 +82,7 @@ This project provides a tool to capture a selected area of the screen, perform O
    pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'  # Update if necessary
    ```
 
-6. **Configure the OpenAI API key:**
+8. **Configure the OpenAI API key:**
 
    Obtain your API key from [OpenAI](https://platform.openai.com/account/api-keys) and set it in the script:
 
@@ -97,11 +125,6 @@ The script includes a pre-prompt to help the GPT model understand the context of
 
 By customizing the pre-prompt, you can guide the GPT model to provide more relevant and accurate responses based on the specific context of your captured text.
 
-## Notes
-
-- Make sure Tesseract is correctly installed and the path is set properly in the script.
-- Ensure you have a valid OpenAI API key and have set it in the script.
-
 ## Script Overview
 
 ### Main Functions:
@@ -119,4 +142,4 @@ By customizing the pre-prompt, you can guide the GPT model to provide more relev
 
 ## License
 
-This project is licensed under the MIT License. See the LICENSE file for details.
+This project is licensed under the MIT License.

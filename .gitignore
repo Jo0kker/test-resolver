@@ -1,2 +1,5 @@
 venv1
-screenshot.png
+.env
+screenshot*
+
+.idea
