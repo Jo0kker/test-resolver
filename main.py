@@ -3,9 +3,10 @@ import pytesseract
 from PIL import Image, ImageGrab
 from openai import OpenAI
 import tkinter as tk
-from tkinter import messagebox
 from dotenv import load_dotenv
 from datetime import datetime
+from flask import Flask, request, jsonify
+import socket
 
 # Charger les variables d'environnement depuis le fichier .env
 load_dotenv()
@@ -13,6 +14,7 @@ load_dotenv()
 # Récupérer la clé API et le chemin de Tesseract depuis les variables d'environnement
 tesseract_cmd_path = os.getenv('TESSERACT_CMD_PATH')
 client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
+port = int(os.getenv('FLASK_PORT', 5000))  # Utiliser 5000 comme port par défaut
 
 # Configuration de Tesseract
 pytesseract.pytesseract.tesseract_cmd = tesseract_cmd_path
@@ -21,7 +23,14 @@ pytesseract.pytesseract.tesseract_cmd = tesseract_cmd_path
 selected_area = None
 
 # Pré-prompt pour aider l'IA à comprendre la demande
-pre_prompt = "Voici une question type qcm sur symfony 7, il peut y avoir plusieurs réponse possible, donne moi uniquement la ou les bonnes réponses, je ne veux pas d'explication, soit bref:\n\n"
+pre_prompt = "Voici une question type qcm sur symfony, il peut y avoir plusieurs réponse possible, donne moi uniquement la ou les bonnes réponses, je ne veux pas d'explication, soit bref:\n\n"
+
+app = Flask(__name__)
+
+def get_ip_address():
+    hostname = socket.gethostname()
+    local_ip = socket.gethostbyname(hostname)
+    return local_ip
 
 def capture_screen_area(x1, y1, x2, y2):
     # Vérification et ajustement des coordonnées
@@ -50,41 +59,44 @@ def ocr_image(image_path):
 def get_gpt_response(question):
     # Inclure le pré-prompt avant la question capturée
     full_prompt = pre_prompt + question
-    response = client.chat.completions.create(model="gpt-3.5-turbo",
-    messages=[
-        {"role": "system", "content": pre_prompt},
-        {"role": "user", "content": question}
-    ],
-    max_tokens=150)
+    response = client.chat.completions.create(
+        model="gpt-3.5-turbo",
+        messages=[
+            {"role": "system", "content": pre_prompt},
+            {"role": "user", "content": question}
+        ],
+        max_tokens=150,
+        temperature=0.5,
+        top_p=1.0
+    )
     return response.choices[0].message.content.strip()
 
-def select_area():
-    # Fonction de sélection de la zone à capturer
-    root.attributes("-alpha", 0.3)
-    area_selector = AreaSelector(root, on_area_selected)
-    root.wait_window(area_selector.top)
-    root.attributes("-alpha", 1.0)  # Assure le retour à la normale après la sélection
-
-def on_area_selected(x1, y1, x2, y2):
+@app.route('/select_area', methods=['POST'])
+def api_select_area():
     global selected_area
+    data = request.json
+    x1, y1, x2, y2 = data['x1'], data['y1'], data['x2'], data['y2']
     selected_area = (x1, y1, x2, y2)
-#     messagebox.showinfo("Zone sélectionnée", f"Zone sélectionnée : ({x1}, {y1}) - ({x2}, {y2})")
+    return jsonify({"status": "zone selected", "area": selected_area})
 
-def capture_and_process():
+@app.route('/capture_and_process', methods=['POST'])
+def api_capture_and_process():
     if selected_area:
         image_path = capture_screen_area(*selected_area)
         text = ocr_image(image_path)
 
         if text.strip():  # Vérifie s'il y a du texte capturé
-#             print(f"Texte capturé: {text}")  # Debugging line
             response = get_gpt_response(text)
-            print(f"Réponse GPT: {response}")  # Debugging line
+            return jsonify({"response": response})
         else:
-#             messagebox.showwarning("Attention", "Aucun texte détecté dans la capture d'écran.")
-            print("Aucun texte détecté dans la capture d'écran.")
+            return jsonify({"error": "No text detected in the screenshot"})
     else:
-        print("Aucune zone sélectionnée. Veuillez sélectionner une zone d'abord.")
-#         messagebox.showwarning("Attention", "Aucune zone sélectionnée. Veuillez sélectionner une zone d'abord.")
+        return jsonify({"error": "No area selected"})
+
+def on_area_selected(x1, y1, x2, y2):
+    global selected_area
+    selected_area = (x1, y1, x2, y2)
+    print(f"Zone sélectionnée : ({x1}, {y1}) - ({x2}, {y2})")
 
 class AreaSelector:
     def __init__(self, master, callback):
@@ -129,6 +141,7 @@ class AreaSelector:
         self.end_x = self.canvas.canvasx(event.x)
         self.end_y = self.canvas.canvasy(event.y)
         self.top.destroy()
+        root.config(cursor="")
         self.callback(int(self.start_x), int(self.start_y), int(self.end_x), int(self.end_y))
 
 # Configuration de l'interface graphique
@@ -136,11 +149,15 @@ root = tk.Tk()
 root.title("Capture et GPT Assistant")
 
 # Bouton pour sélectionner la zone
-select_button = tk.Button(root, text="Sélectionner la zone", command=select_area, cursor="hand2")
+select_button = tk.Button(root, text="Sélectionner la zone", command=lambda: AreaSelector(root, on_area_selected), cursor="hand2")
 select_button.pack(pady=10)
 
-# Bouton pour capturer la zone et obtenir une réponse
-capture_button = tk.Button(root, text="Capturer et obtenir une réponse", command=capture_and_process, cursor="hand2")
-capture_button.pack(pady=10)
+# Afficher l'adresse IP
+ip_address = get_ip_address()
+tk.Label(root, text=f"API accessible à: http://{ip_address}:{port}").pack(pady=10)
+
+# Lancer l'application Flask dans un thread séparé
+import threading
+threading.Thread(target=lambda: app.run(host='0.0.0.0', port=port)).start()
 
 root.mainloop()
