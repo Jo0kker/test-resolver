@@ -95,7 +95,7 @@ This project provides a tool to capture a selected area of the screen, perform O
 1. **Run the script:**
 
    ```bash
-   python capture_gpt.py
+   python main.py
    ```
 
 2. **Using the tool:**
