@@ -26,7 +26,7 @@ This project provides a tool to capture a selected area of the screen, perform O
 3. **Install the dependencies:**
 
    ```bash
-   pip install pytesseract pillow openai screeninfo python-dotenv
+   pip install pytesseract pillow openai screeninfo python-dotenv flask
    ```
 
 4. **Install Tkinter:**
